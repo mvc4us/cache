@@ -1,0 +1,36 @@
+{
+  "name": "mvc4us/cache",
+  "type": "library",
+  "description": "Alternate Cache Interface to PSR-16",
+  "keywords": [
+    "cache",
+    "caching"
+  ],
+  "homepage": "https://mvc4.us/cache/",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Erdem Uncuoğlu",
+      "homepage": "https://mvc4.us/",
+      "email": "erdem@mvc4.us"
+    }
+  ],
+  "require": {
+    "php": ">=8.0"
+  },
+  "require-dev": {
+    "ext-redis": "*",
+    "phpunit/phpunit": "^9.5.20",
+    "predis/predis": "^1.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "Mvc4us\\Cache\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Mvc4us\\Cache\\Tests\\": "tests/"
+    }
+  }
+}
