@@ -7,37 +7,22 @@ namespace Mvc4us\Cache\Redis;
 use Mvc4us\Cache\Adapter\AbstractAdapter;
 use Mvc4us\Cache\Adapter\CacheException;
 use Mvc4us\Cache\Adapter\InvalidArgumentException;
+use Mvc4us\Cache\Adapter\NotFoundException;
+use Symfony\Component\Serializer\Encoder\JsonEncode;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
+use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 
 /**
  * @author erdem
  */
 class RedisCacheAdapter extends AbstractAdapter
 {
+    public const RESERVED_CHARACTERS = '{}()\@:';
 
-    private \Redis|\Predis\ClientInterface $redis;
-
-    private static array $defaultConnectionOptions = [
-        'class' => null,
-        'persistent' => 0,
-        'persistent_id' => null,
-        'timeout' => 30,
-        'read_timeout' => 0,
-        'retry_interval' => 0,
-        'tcp_keepalive' => 0,
-        'lazy' => null,
-        'redis_cluster' => false,
-        'redis_sentinel' => null,
-        'dbindex' => 0,
-        'failover' => 'none',
-        'ssl' => null, // see https://php.net/context.ssl
-    ];
-
-    private bool $lastFound = false;
+    use RedisTrait;
 
     /**
-     * Constructor code is copied and modified from Symfony Cache Component
-     *
-     * @link https://github.com/symfony/cache/blob/6.0/Traits/RedisTrait.php
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\CacheException
      */
@@ -48,265 +33,79 @@ class RedisCacheAdapter extends AbstractAdapter
         \DateInterval|int|null $defaultLifetime = null
     ) {
         parent::__construct($namespace, $defaultLifetime);
-
-        $this->maxIdLength = 1024;
-
-        if (str_starts_with($dsn, 'redis:')) {
-            $scheme = 'redis';
-        } elseif (str_starts_with($dsn, 'rediss:')) {
-            $scheme = 'rediss';
-        } else {
-            throw new InvalidArgumentException(
-                sprintf('Invalid Redis DSN: "%s" does not start with "redis:" or "rediss:".', $dsn)
-            );
-        }
-
-        if (!extension_loaded('redis') && !class_exists(\Predis\Client::class)) {
-            throw new CacheException(
-                sprintf('Cannot find the "redis" extension nor the "predis/predis" package: "%s".', $dsn)
-            );
-        }
-
-        $params = preg_replace_callback(
-            '#^' . $scheme . ':(//)?(?:(?:[^:@]*+:)?([^@]*+)@)?#',
-            function ($m) use (&$auth) {
-                if (isset($m[2])) {
-                    $auth = $m[2];
-
-                    if ($auth === '') {
-                        $auth = null;
-                    }
-                }
-
-                return 'file:' . ($m[1] ?? '');
-            },
-            $dsn
-        );
-
-        $params = parse_url($params);
-        if ($params === false) {
-            throw new InvalidArgumentException(sprintf('Invalid Redis DSN: "%s".', $dsn));
-        }
-
-        $query = $hosts = [];
-
-        $tls = $scheme === 'rediss';
-        $tcpScheme = $tls ? 'tls' : 'tcp';
-
-        if (isset($params['query'])) {
-            parse_str($params['query'], $query);
-
-            if (isset($query['host'])) {
-                if (!is_array($hosts = $query['host'])) {
-                    throw new InvalidArgumentException(sprintf('Invalid Redis DSN: "%s".', $dsn));
-                }
-                foreach ($hosts as $host => $parameters) {
-                    if (is_string($parameters)) {
-                        parse_str($parameters, $tmpArr);
-                        $parameters = $tmpArr;
-                    }
-                    $i = strrpos($host, ':');
-                    if ($i === false) {
-                        $hosts[$host] = ['scheme' => $tcpScheme, 'host' => $host, 'port' => 6379] + $parameters;
-                    } elseif ($port = (int)substr($host, 1 + $i)) {
-                        $hosts[$host] = [
-                                'scheme' => $tcpScheme,
-                                'host' => substr($host, 0, $i),
-                                'port' => $port
-                            ] + $parameters;
-                    } else {
-                        $hosts[$host] = ['scheme' => 'unix', 'path' => substr($host, 0, $i)] + $parameters;
-                    }
-                }
-                $hosts = array_values($hosts);
-            }
-        }
-
-        if (isset($params['host']) || isset($params['path'])) {
-            if (!isset($params['dbindex']) && isset($params['path'])) {
-                if (preg_match('#/(\d+)$#', $params['path'], $m)) {
-                    $params['dbindex'] = $m[1];
-                    $params['path'] = substr($params['path'], 0, -strlen($m[0]));
-                } elseif (isset($params['host'])) {
-                    throw new InvalidArgumentException(
-                        sprintf('Invalid Redis DSN: "%s", the "dbindex" parameter must be a number.', $dsn)
-                    );
-                }
-            }
-
-            if (isset($params['host'])) {
-                array_unshift(
-                    $hosts,
-                    ['scheme' => $tcpScheme, 'host' => $params['host'], 'port' => $params['port'] ?? 6379]
-                );
-            } else {
-                array_unshift($hosts, ['scheme' => 'unix', 'path' => $params['path']]);
-            }
-        }
-
-        if (!$hosts) {
-            throw new InvalidArgumentException(sprintf('Invalid Redis DSN: "%s".', $dsn));
-        }
-
-        $params += $query + $options + self::$defaultConnectionOptions;
-
-        if (null === $params['class'] && \extension_loaded('redis')) {
-            $class = \Redis::class;
-        } else {
-            $class = $params['class'] ?? \Predis\Client::class;
-        }
-
-        if (is_a($class, \Redis::class, true)) {
-            $connect = $params['persistent'] || $params['persistent_id'] ? 'pconnect' : 'connect';
-            $redis = new $class();
-
-            $initializer = static function ($redis) use ($connect, $params, $dsn, $auth, $hosts, $tls) {
-                $host = $hosts[0]['host'] ?? $hosts[0]['path'];
-                $port = $hosts[0]['port'] ?? 0;
-
-                if (isset($hosts[0]['host']) && $tls) {
-                    $host = 'tls://' . $host;
-                }
-
-                try {
-                    @$redis->{$connect}(
-                        $host,
-                        $port,
-                        $params['timeout'],
-                        (string)$params['persistent_id'],
-                        $params['retry_interval'],
-                        $params['read_timeout'],
-                        ...
-                        \defined('Redis::SCAN_PREFIX') ? [['stream' => $params['ssl'] ?? null]] : []
-                    );
-
-                    set_error_handler(function ($type, $msg) use (&$error) {
-                        $error = $msg;
-                    });
-                    try {
-                        $isConnected = $redis->isConnected();
-                    } finally {
-                        restore_error_handler();
-                    }
-                    if (!$isConnected) {
-                        $error = preg_match('/^Redis::p?connect\(\): (.*)/', $error, $error) ? sprintf(
-                            ' (%s)',
-                            $error[1]
-                        ) : '';
-                        throw new InvalidArgumentException(
-                            sprintf('Redis connection "%s" failed: ', $dsn) . $error . '.'
-                        );
-                    }
-
-                    if ((null !== $auth && !$redis->auth($auth))
-                        || ($params['dbindex'] && !$redis->select($params['dbindex']))
-                    ) {
-                        $e = preg_replace('/^ERR /', '', $redis->getLastError());
-                        throw new InvalidArgumentException(sprintf('Redis connection "%s" failed: ', $dsn) . $e . '.');
-                    }
-
-                    if (0 < $params['tcp_keepalive'] && \defined('Redis::OPT_TCP_KEEPALIVE')) {
-                        $redis->setOption(\Redis::OPT_TCP_KEEPALIVE, $params['tcp_keepalive']);
-                    }
-                } catch (\RedisException $e) {
-                    throw new InvalidArgumentException(
-                        sprintf('Redis connection "%s" failed: ', $dsn) . $e->getMessage()
-                    );
-                }
-
-                return true;
-            };
-
-            $initializer($redis);
-        } elseif (is_a($class, \Predis\ClientInterface::class, true)) {
-            $params += ['parameters' => []];
-            $params['parameters'] += [
-                'persistent' => $params['persistent'],
-                'timeout' => $params['timeout'],
-                'read_write_timeout' => $params['read_timeout'],
-                'tcp_nodelay' => true,
-            ];
-            if ($params['dbindex']) {
-                $params['parameters']['database'] = $params['dbindex'];
-            }
-            if (null !== $auth) {
-                $params['parameters']['password'] = $auth;
-            }
-            $hosts = $hosts[0];
-            $params['exceptions'] = false;
-
-            $redis = new $class(
-                $hosts,
-                array_diff_key($params, array_diff_key(self::$defaultConnectionOptions, ['ssl' => null]))
-            );
-        } elseif (class_exists($class, false)) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    '"%s" is not a subclass of "Redis", "RedisArray", "RedisCluster" nor "Predis\ClientInterface".',
-                    $class
-                )
-            );
-        } else {
-            throw new InvalidArgumentException(sprintf('Class "%s" does not exist.', $class));
-        }
-
-        $this->redis = $redis;
+        $this->initialize($dsn, $options);
     }
 
     /**
      * @inheritDoc
      */
-    public function get(string $key, mixed &$var): bool
+    public function get(string $key, mixed $default = null): mixed
     {
-        if (!$this->has($key)) {
-            return $this->lastFound = false;
-        }
-        $key = $this->validateKey($key);
-
-        $type = gettype($var);
-        if ($type === 'array') {
-            $value = $this->redis->hGetAll($key);
-            if (is_array($value)) {
-                ksort($value);
-                $var = $value;
-                return $this->lastFound = true;
-            }
-            return $this->lastFound = false;
-        }
-
-        $value = $this->redis->get($key);
-        if ($type === 'object') {
-            if ($this->sameObjectType($var, $value)) {
-                $var = $value;
-                return $this->lastFound = true;
-            }
-            return $this->lastFound = false;
-        }
-
-        $var = $this->redis->get($key);
-        return $this->lastFound = true;
+        return $this->doGet($key, null, 'mixed', $default);
     }
 
     /**
      * @inheritDoc
      */
-    public function set(string $key, mixed $value, int|\DateInterval|null $lifetime = null): bool
+    public function getBool(string $key, ?bool $default = null): bool
     {
-        $key = $this->validateKey($key);
-        $lifetime = $this->validateLifeTime($lifetime);
-
-        if ($lifetime === null) {
-            return $this->redis->set($key, $value);
-        }
-        return $this->redis->setEx($key, $lifetime, $value);
+        return $this->doGet($key, null, 'bool', $default);
     }
 
     /**
      * @inheritDoc
      */
-    public function delete(string $key): bool
+    public function getInt(string $key, ?int $default = null): int
     {
-        return $this->redis->unlink($this->validateKey($key)) === 1;
+        return $this->doGet($key, null, 'int', $default);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getFloat(string $key, ?float $default = null): float
+    {
+        return $this->doGet($key, null, 'float', $default);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getString(string $key, ?string $default = null): string
+    {
+        return $this->doGet($key, null, 'string', $default);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getArray(string $key, ?array $default = null): array
+    {
+        return $this->doGet($key, null, 'array', $default);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getObject(string $key, object|string|null $default): mixed
+    {
+        return $this->doGet($key, null, 'object', $default);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function set(string $key, mixed $value, int|\DateInterval|null $lifetime = null): void
+    {
+        $this->doSet($key, null, $value, $lifetime);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function delete(string $key): void
+    {
+        $this->redis->unlink($this->validateKey($key));
     }
 
     /**
@@ -320,49 +119,76 @@ class RedisCacheAdapter extends AbstractAdapter
     /**
      * @inheritDoc
      */
-    public function getItem(string $key, string $memberKey, mixed &$var): bool
+    public function getItem(string $key, string $memberKey, mixed $default = null): mixed
     {
-        if (!$this->hasItem($key, $memberKey)) {
-            return $this->lastFound = false;
-        }
-
-        $value = $this->redis->hGet($this->validateKey($key), $this->validateKey($memberKey, false));
-        $type = gettype($var);
-        if ('object' === $type) {
-            if ($this->sameObjectType($var, $value)) {
-                $var = $value;
-                return $this->lastFound = true;
-            }
-            return $this->lastFound = false;
-        }
-
-        $var = $value;
-        return $this->lastFound = true;
+        return $this->doGet($key, $memberKey, 'mixed', $default);
     }
 
     /**
      * @inheritDoc
      */
-    public function setItem(string $key, string $memberKey, mixed $value, \DateInterval|int|null $lifetime = null): bool
+    public function getItemBool(string $key, string $memberKey, ?bool $default = null): bool
     {
-        $key = $this->validateKey($key);
-        $memberKey = $this->validateKey($memberKey, false);
-        $lifetime = $this->validateLifeTime($lifetime);
+        return (bool)$this->doGet($key, $memberKey, 'bool', $default);
+    }
 
-        if (!$this->redis->hSet($key, $memberKey, $value)) {
-            return false;
+    /**
+     * @inheritDoc
+     */
+    public function getItemInt(string $key, string $memberKey, ?int $default = null): int
+    {
+        return (int)$this->doGet($key, $memberKey, 'int', $default);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getItemFloat(string $key, string $memberKey, ?float $default = null): float
+    {
+        return (float)$this->doGet($key, $memberKey, 'float', $default);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getItemString(string $key, string $memberKey, ?string $default = null): string
+    {
+        return (string)$this->doGet($key, $memberKey, 'string', $default);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getItemArray(string $key, string $memberKey, ?array $default = null): array
+    {
+        return $this->doGet($key, $memberKey, 'array', $default);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getItemObject(string $key, string $memberKey, object|string|null $default = null): mixed
+    {
+        return $this->doGet($key, $memberKey, 'object', $default);
+    }
+
+    public function getItemAll(string $key, ?array $default = null): array
+    {
+        if (!$this->has($key)) {
+            if ($default === null) {
+                throw NotFoundException::create($key);
+            }
+            return $default;
         }
+        return $this->redis->hGetAll($this->validateKey($key));
+    }
 
-        if ($lifetime === null) {
-            return true;
-        }
-
-        if ($this->redis->expire($key, $lifetime)) {
-            return true;
-        };
-
-        $this->redis->hDel($key, $memberKey);
-        return false;
+    /**
+     * @inheritDoc
+     */
+    public function setItem(string $key, string $memberKey, mixed $value, \DateInterval|int|null $lifetime = null): void
+    {
+        $this->doSet($key, $memberKey, $value, $lifetime);
     }
 
     /**
@@ -394,9 +220,15 @@ class RedisCacheAdapter extends AbstractAdapter
      */
     public function setLifeTime(string $key, int|\DateInterval|null $lifetime = null): bool
     {
-        $validKey = $this->validateKey($key);
-        $validLifetime = $this->validateLifeTime($lifetime);
-        return $this->redis->expire($validKey, $validLifetime);
+        return $this->redis->expire($this->validateKey($key), $this->validateLifeTime($lifetime));
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getKeys(?string $pattern = null): array
+    {
+        return $this->redis->keys($pattern ?? '*');
     }
 
     /**
@@ -409,26 +241,178 @@ class RedisCacheAdapter extends AbstractAdapter
         return count($this->redis->keys($this->namespace . '*')) === 0;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function found(): bool
+    public function getClient(): \Redis|\Predis\ClientInterface
     {
-        return $this->lastFound;
+        return $this->redis;
     }
 
     /**
-     * @inheritDoc
+     * @throws \Mvc4us\Cache\Exception\NotFoundException
+     * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      */
-    public function notFound(): bool
+    private function doGet(string $key, ?string $memberKey, string $type, mixed $default): mixed
     {
-        return !$this->lastFound;
+        $validKey = $this->validateKey($key);
+        $validMemberKey = $memberKey ? $this->validateKey($memberKey, false) : null;
+
+        if ($type === 'mixed' && $default !== null) {
+            $type = gettype($default);
+        }
+
+        if (!$this->isValidDefault($type, $default)) {
+            throw InvalidArgumentException::createInvalidDefaultType(gettype($default), $type);
+        }
+
+        if (!$this->has($key) || ($memberKey && !$this->hasItem($key, $memberKey))) {
+            if ($default === null) {
+                throw NotFoundException::create($key, $memberKey);
+            }
+            return $default;
+        }
+
+        if ($type === 'array') {
+            if ($memberKey) {
+                $value = $this->redis->hget($validKey, $validMemberKey);
+            } else {
+                $value = $this->redis->get($validKey);
+            }
+            if ($this->redis->getOption(\Redis::OPT_SERIALIZER) === 0) {
+                $value = json_decode($value, true);
+            }
+            if (is_array($value)) {
+                return $value;
+            }
+            if (is_array($default)) {
+                return $default;
+            }
+            throw InvalidArgumentException::createInvalidType(gettype($value), $type);
+        }
+
+        if ($type === 'object') {
+            if (is_object($default)) {
+                $class = get_class($default);
+            } elseif (is_string($default)) {
+                $class = $default;
+                $default = null;
+            } else {
+                throw InvalidArgumentException::createInvalidDefaultType('null', $type);
+            }
+
+            if ($memberKey) {
+                $value = $this->redis->hget($validKey, $validMemberKey);
+            } else {
+                $value = $this->redis->get($validKey);
+            }
+            if ($this->redis->getOption(\Redis::OPT_SERIALIZER) === 0) {
+                if ($this->serializer === null) {
+                    throw new InvalidArgumentException('Serializer is not defined');
+                }
+                $value = $this->deserialize($value, $class);
+            }
+            if (is_object($value) && get_class($value) === $class) {
+                return $value;
+            }
+
+            if (is_object($default)) {
+                return $default;
+            }
+            throw InvalidArgumentException::createInvalidType(gettype($value), $type);
+        }
+
+        if ($memberKey) {
+            $value = $this->redis->hget($validKey, $validMemberKey);
+        } else {
+            $value = $this->redis->get($validKey);
+        }
+        //if ($type !== gettype($value) && $type !== 'mixed') {
+        //    throw InvalidArgumentException::createInvalidType(gettype($value), $type);
+        //}
+        return $value;
     }
 
-    private function sameObjectType($o1, $o2): bool
+    /**
+     * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
+     * @throws \Mvc4us\Cache\Adapter\CacheException
+     * @throws \Mvc4us\Cache\Adapter\InvalidArgumentException
+     */
+    private function doSet(string $key, ?string $memberKey, mixed $value, int|\DateInterval|null $lifetime): void
     {
-        return get_class($o1) === get_class($o2);
+        $validKey = $this->validateKey($key);
+        $validMemberKey = $memberKey ? $this->validateKey($memberKey, false) : null;
+
+        $lifetime = $this->validateLifeTime($lifetime);
+
+        if (gettype($value) === 'array' && $this->redis->getOption(\Redis::OPT_SERIALIZER) === 0) {
+            $value = json_encode($value);
+        }
+
+        if (gettype($value) === 'object' && $this->redis->getOption(\Redis::OPT_SERIALIZER) === 0) {
+            if ($this->serializer === null) {
+                throw new InvalidArgumentException('Serializer is not defined');
+            }
+            $value = $this->serialize($value);
+        }
+
+        if ($memberKey) {
+            if ($this->redis->hSet($validKey, $validMemberKey, $value)) {
+                if ($lifetime === null) {
+                    return;
+                }
+                if ($this->redis->expire($validKey, $lifetime)) {
+                    return;
+                }
+                $this->redis->hDel($validKey, $validMemberKey);
+            }
+            throw CacheException::createFailedSet($key, $memberKey);
+        }
+
+        if ($lifetime === null) {
+            $ret = $this->redis->set($validKey, $value);
+        } else {
+            $ret = $this->redis->setEx($validKey, $lifetime, $value);
+        }
+        if (!$ret) {
+            throw CacheException::createFailedSet($key);
+        }
     }
 
+    private function isValidDefault(string $type, mixed $default): bool
+    {
+        return ($type === 'mixed')
+            || ($type !== 'object' && ($default === null || $type === gettype($default)))
+            || ($type === 'object' && (gettype($default) === 'string' || gettype($default) === 'object'));
+    }
+
+    private function serialize(mixed $data): string
+    {
+        return $this->serializer->serialize(
+            $data,
+            'json',
+            [
+                JsonEncode::OPTIONS => JSON_HEX_TAG + JSON_HEX_AMP + JSON_HEX_APOS + JSON_HEX_QUOT,
+                //AbstractNormalizer::IGNORED_ATTRIBUTES => [
+                //    '__initializer__',
+                //    '__cloner__',
+                //    '__isInitialized__',
+                //],
+                'circular_reference_limit' => 1,
+                AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object, $format, $context) {
+                    return null;
+                },
+                AbstractObjectNormalizer::ENABLE_MAX_DEPTH => true,
+                DateTimeNormalizer::TIMEZONE_KEY => 'UTC'
+            ]
+        );
+    }
+
+    private function deserialize(string $json, object|string $object): mixed
+    {
+        return $this->serializer->deserialize(
+            $json,
+            is_object($object) ? get_class($object) : $object,
+            'json',
+            [AbstractNormalizer::OBJECT_TO_POPULATE => is_object($object) ? $object : null],
+        );
+    }
 }
 

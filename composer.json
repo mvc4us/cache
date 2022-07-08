@@ -21,7 +21,8 @@
   "require-dev": {
     "ext-redis": "*",
     "phpunit/phpunit": "^9.5.20",
-    "predis/predis": "^1.1"
+    "predis/predis": "^1.1",
+    "symfony/serializer": "6.1.*"
   },
   "autoload": {
     "psr-4": {
@@ -32,5 +33,9 @@
     "psr-4": {
       "Mvc4us\\Cache\\Tests\\": "tests/"
     }
+  },
+  "suggest": {
+    "ext-redis": "The phpredis extension provides an API for communicating with the Redis key-value store.",
+    "predis/predis": "Flexible and feature-complete Redis client for PHP and HHVM"
   }
 }

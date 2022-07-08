@@ -22,12 +22,12 @@ abstract class AbstractAdapter implements CacheInterface
     /**
      * @var int|null Default lifetime for items or null for persistent storage.
      */
-    protected ?int $defaultLifetime;
+    protected ?int $defaultLifetime = null;
 
     /**
      * @var int|null The maximum length to enforce for keys or null when no limit applies.
      */
-    protected ?int $maxIdLength;
+    protected ?int $maxIdLength = null;
 
     /**
      * @internal
@@ -39,16 +39,6 @@ abstract class AbstractAdapter implements CacheInterface
      */
     protected function __construct(string $namespace = '', \DateInterval|int|null $defaultLifetime = null)
     {
-        if ($this->maxIdLength !== null && \strlen($namespace) > $this->maxIdLength - 24) {
-            throw new InvalidArgumentException(
-                \sprintf(
-                    'Namespace must be %d chars max, %d given ("%s").',
-                    $this->maxIdLength - 24,
-                    \strlen($namespace),
-                    $namespace
-                )
-            );
-        }
         $this->setNamespace($namespace);
         $this->defaultLifetime = $this->validateLifeTime($defaultLifetime);
     }
@@ -57,18 +47,23 @@ abstract class AbstractAdapter implements CacheInterface
      * Validate cache item key.
      *
      * @param string $key
-     * @param bool $withNamespace
+     * @param bool   $withNamespace
+     *
      * @return string
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      */
-    protected function validateKey(string $key, bool $withNamespace = true): string
+    public function validateKey(string $key, bool $withNamespace = true): string
     {
         if ('' === $key) {
             throw new InvalidArgumentException('Cache key length must be greater than zero.');
         }
-        if (strpbrk($key, self::RESERVED_CHARACTERS) !== false) {
+        if (strpbrk($key, static::RESERVED_CHARACTERS) !== false) {
             throw new InvalidArgumentException(
-                \sprintf('Cache key "%s" contains reserved characters "%s".', $key, self::RESERVED_CHARACTERS)
+                \sprintf(
+                    'Cache key/namespace "%s" contains reserved characters "%s".',
+                    $key,
+                    static::RESERVED_CHARACTERS
+                )
             );
         }
         if ($withNamespace) {
@@ -86,6 +81,7 @@ abstract class AbstractAdapter implements CacheInterface
      * Validate lifeTime and return as seconds.
      *
      * @param \DateInterval|int|null $lifeTime
+     *
      * @return int|null
      */
     protected function validateLifeTime(\DateInterval|int|null $lifeTime): ?int
@@ -102,9 +98,7 @@ abstract class AbstractAdapter implements CacheInterface
     }
 
     /**
-     * Returns key prefix (namespace) of this instance
-     *
-     * @return string
+     * @inheritDoc
      */
     public function getNamespace(): string
     {
@@ -112,21 +106,25 @@ abstract class AbstractAdapter implements CacheInterface
     }
 
     /**
-     * Sets key prefix (namespace) of this instance
-     *
-     * @param string $namespace
-     * @return void
-     * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
+     * @inheritDoc
      */
     public function setNamespace(string $namespace): void
     {
+        if ($this->maxIdLength !== null && \strlen($namespace) > $this->maxIdLength - 24) {
+            throw new InvalidArgumentException(
+                \sprintf(
+                    'Namespace must be %d chars max, %d given ("%s").',
+                    $this->maxIdLength - 24,
+                    \strlen($namespace),
+                    $namespace
+                )
+            );
+        }
         $this->namespace = $namespace === '' ? '' : $this->validateKey($namespace, false) . static::NS_SEPARATOR;
     }
 
     /**
-     * Gets default lifetime in seconds for items.
-     *
-     * @return int|null
+     * @inheritDoc
      */
     public function getDefaultLifetime(): ?int
     {
@@ -134,10 +132,7 @@ abstract class AbstractAdapter implements CacheInterface
     }
 
     /**
-     * Sets default lifetime for items.
-     *
-     * @param \DateInterval|int|null $defaultLifetime
-     * @return void
+     * @inheritDoc
      */
     public function setDefaultLifetime(\DateInterval|int|null $defaultLifetime): void
     {
