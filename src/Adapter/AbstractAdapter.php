@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 namespace Mvc4us\Cache\Adapter;
@@ -47,8 +46,7 @@ abstract class AbstractAdapter implements CacheInterface
      * Validate cache item key.
      *
      * @param string $key
-     * @param bool   $withNamespace
-     *
+     * @param bool $withNamespace
      * @return string
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      */
@@ -81,7 +79,6 @@ abstract class AbstractAdapter implements CacheInterface
      * Validate lifeTime and return as seconds.
      *
      * @param \DateInterval|int|null $lifeTime
-     *
      * @return int|null
      */
     protected function validateLifeTime(\DateInterval|int|null $lifeTime): ?int

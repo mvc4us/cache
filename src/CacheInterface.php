@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 namespace Mvc4us\Cache;
@@ -12,9 +11,8 @@ interface CacheInterface
     /**
      * Fetches an item from the cache.
      *
-     * @param string $key     The key of the item to retrieve from the cache
-     * @param mixed  $default Default variable in case item is not found
-     *
+     * @param string $key                                       The key of the item to retrieve from the cache
+     * @param mixed $default                                    Default variable in case item is not found
      * @return mixed                                            Returns the value for the given key/item
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException When the $key is not valid or when the type of item to
      *                                                          be returned does not match with the type of $default if
@@ -26,9 +24,8 @@ interface CacheInterface
     /**
      * See {@link \Mvc4us\Cache\CacheInterface::get() CacheInterface::get()}
      *
-     * @param string    $key
+     * @param string $key
      * @param bool|null $default
-     *
      * @return bool
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -38,9 +35,8 @@ interface CacheInterface
     /**
      * See {@link \Mvc4us\Cache\CacheInterface::get() CacheInterface::get()}
      *
-     * @param string   $key
+     * @param string $key
      * @param int|null $default
-     *
      * @return int
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -50,9 +46,8 @@ interface CacheInterface
     /**
      * See {@link \Mvc4us\Cache\CacheInterface::get() CacheInterface::get()}
      *
-     * @param string     $key
+     * @param string $key
      * @param float|null $default
-     *
      * @return float
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -62,9 +57,8 @@ interface CacheInterface
     /**
      * See {@link \Mvc4us\Cache\CacheInterface::get() CacheInterface::get()}
      *
-     * @param string      $key
+     * @param string $key
      * @param string|null $default
-     *
      * @return string
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -74,9 +68,8 @@ interface CacheInterface
     /**
      * See {@link \Mvc4us\Cache\CacheInterface::get() CacheInterface::get()}
      *
-     * @param string     $key
+     * @param string $key
      * @param array|null $default
-     *
      * @return array
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -88,9 +81,8 @@ interface CacheInterface
      * If $default is a Fully Qualified Class Name then it will be the type and the default will be null.
      * If $default is an instance of a class then it will be used as a default value and FQCN will be type.
      *
-     * @param string             $key
+     * @param string $key
      * @param object|string|null $default
-     *
      * @return object
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -100,11 +92,10 @@ interface CacheInterface
     /**
      * Persists data in the cache, uniquely referenced by a key with an optional expiration TTL time.
      *
-     * @param string                 $key      The key of the item to store
-     * @param mixed                  $value    The value of the item to store, must be serializable
+     * @param string $key                      The key of the item to store
+     * @param mixed $value                     The value of the item to store, must be serializable
      * @param int|\DateInterval|null $lifetime Optional. If no value is sent and the driver supports then the library
      *                                         may set a default value for it or let the driver take care of that
-     *
      * @return void
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException When the $key is not valid
      * @throws \Mvc4us\Cache\Exception\CacheException           When the item can not be stored into cache
@@ -115,7 +106,6 @@ interface CacheInterface
      * Deletes an item from the cache by its unique key.
      *
      * @param string $key The unique cache key of the item to delete.
-     *
      * @return void
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException When the $key is not valid
      * @throws \Mvc4us\Cache\Exception\CacheException           When the item can not be deleted from cache
@@ -130,7 +120,6 @@ interface CacheInterface
      * another script can remove it making the state of your app out of date.
      *
      * @param string $key The unique cache key of the item.
-     *
      * @return bool
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException MUST be thrown if the key is not a legal value.
      */
@@ -139,10 +128,9 @@ interface CacheInterface
     /**
      * If the adapter supports fetches a value from a table like item with a member key.
      *
-     * @param string $key       The key of the table in the cache
-     * @param string $memberKey The key of the item to retrieve from the table
-     * @param mixed  $default   Default variable in case item is not found
-     *
+     * @param string $key                                       The key of the table in the cache
+     * @param string $memberKey                                 The key of the item to retrieve from the table
+     * @param mixed $default                                    Default variable in case item is not found
      * @return mixed Returns the value for the given key/item
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException When the $key is not valid or when the type of item to
      *                                                          be returned does not match with the type of $default if
@@ -154,10 +142,9 @@ interface CacheInterface
     /**
      * See {@link \Mvc4us\Cache\CacheInterface::getItem() CacheInterface::getItem()}
      *
-     * @param string    $key
+     * @param string $key
      * @param bool|null $default
-     * @param string    $memberKey
-     *
+     * @param string $memberKey
      * @return bool
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -167,10 +154,9 @@ interface CacheInterface
     /**
      * See {@link \Mvc4us\Cache\CacheInterface::getItem() CacheInterface::getItem()}
      *
-     * @param string   $key
-     * @param string   $memberKey
+     * @param string $key
+     * @param string $memberKey
      * @param int|null $default
-     *
      * @return int
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -180,10 +166,9 @@ interface CacheInterface
     /**
      * See {@link \Mvc4us\Cache\CacheInterface::getItem() CacheInterface::getItem()}
      *
-     * @param string     $key
-     * @param string     $memberKey
+     * @param string $key
+     * @param string $memberKey
      * @param float|null $default
-     *
      * @return float
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -193,10 +178,9 @@ interface CacheInterface
     /**
      * See {@link \Mvc4us\Cache\CacheInterface::getItem() CacheInterface::getItem()}
      *
-     * @param string      $key
-     * @param string      $memberKey
+     * @param string $key
+     * @param string $memberKey
      * @param string|null $default
-     *
      * @return string
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -206,10 +190,9 @@ interface CacheInterface
     /**
      * See {@link \Mvc4us\Cache\CacheInterface::getItem() CacheInterface::getItem()}
      *
-     * @param string     $key
-     * @param string     $memberKey
+     * @param string $key
+     * @param string $memberKey
      * @param array|null $default
-     *
      * @return array
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -222,10 +205,9 @@ interface CacheInterface
      * If $default is an instance of the class then will be used as a type and a default value.
      * See {@link \Mvc4us\Cache\CacheInterface::getItem() CacheInterface::getItem()}
      *
-     * @param string             $key
-     * @param string             $memberKey
+     * @param string $key
+     * @param string $memberKey
      * @param object|string|null $default
-     *
      * @return object
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      * @throws \Mvc4us\Cache\Exception\NotFoundException
@@ -235,9 +217,8 @@ interface CacheInterface
     /**
      * If the adapter supports fetches the whole table as an array.
      *
-     * @param string     $key     The key of the table in the cache
-     * @param array|null $default Default variable in case item is not found
-     *
+     * @param string $key                                       The key of the table in the cache
+     * @param array|null $default                               Default variable in case item is not found
      * @return array
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException When the $key is not valid or when the type of item to
      *                                                          be returned does not match with the type of $default if
@@ -250,13 +231,12 @@ interface CacheInterface
      * If the adapter supports persists data into a table in the cache, uniquely referenced by a key and a member key
      * with an optional expiration TTL time.
      *
-     * @param string                 $key       The key of a table in the cache.
-     * @param string                 $memberKey The unique key of an item in the table.
-     * @param mixed                  $value     The value of the item to store, must be serializable.
+     * @param string $key                       The key of a table in the cache.
+     * @param string $memberKey                 The unique key of an item in the table.
+     * @param mixed $value                      The value of the item to store, must be serializable.
      * @param int|\DateInterval|null $lifetime  Optional. The TTL value of table/item. If no value is sent and the
      *                                          driver supports TTL then the library may set a default value for it or
      *                                          let the driver take care of that.
-     *
      * @return void
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException When the $key/$memberKey is not valid
      * @throws \Mvc4us\Cache\Exception\CacheException           When the item can not be stored into cache/table
@@ -268,7 +248,6 @@ interface CacheInterface
      *
      * @param string $key       The unique key of this table in the cache.
      * @param string $memberKey The unique key of the item in this table.
-     *
      * @return bool True if the item was successfully removed. False if there was an error.
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException When the $key/$memberKey is not valid
      * @throws \Mvc4us\Cache\Exception\CacheException           When the item can not be deleted from cache
@@ -284,7 +263,6 @@ interface CacheInterface
      *
      * @param string $key       The unique key of this table in the cache.
      * @param string $memberKey The unique key of the item in this table.
-     *
      * @return bool
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException MUST be thrown if the $key and/or $memberKey string is
      *                          not a legal value.
@@ -295,7 +273,6 @@ interface CacheInterface
      * Gets remaining lifetime of an item in seconds.
      *
      * @param string $key The unique cache key of the item.
-     *
      * @return int
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException MUST be thrown if the key is not a legal value.
      */
@@ -304,10 +281,9 @@ interface CacheInterface
     /**
      * Sets or resets lifetime of an item.
      *
-     * @param string                 $key      The key of the item to store.
+     * @param string $key                      The key of the item to store.
      * @param int|\DateInterval|null $lifetime If no value is sent and the driver supports then the library may set a
      *                                         default value for it or let the driver take care of that.
-     *
      * @return bool                            True on success and false on failure.
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException MUST be thrown if the key is not a legal value.
      */
@@ -317,7 +293,6 @@ interface CacheInterface
      * Return all keys matching pattern (like in Redis KEYS).
      *
      * @param string|null $pattern
-     *
      * @return string[]
      */
     public function getKeys(?string $pattern = null): array;
@@ -340,7 +315,6 @@ interface CacheInterface
      * Sets key prefix (namespace) of this instance
      *
      * @param string $namespace
-     *
      * @return void
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
      */
@@ -357,7 +331,6 @@ interface CacheInterface
      * Sets default lifetime for items.
      *
      * @param \DateInterval|int|null $defaultLifetime
-     *
      * @return void
      */
     public function setDefaultLifetime(\DateInterval|int|null $defaultLifetime): void;
