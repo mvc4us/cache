@@ -7,6 +7,7 @@ use Mvc4us\Cache\Adapter\AbstractAdapter;
 use Mvc4us\Cache\Adapter\CacheException;
 use Mvc4us\Cache\Adapter\InvalidArgumentException;
 use Mvc4us\Cache\Adapter\NotFoundException;
+use Predis\ClientInterface;
 use Symfony\Component\Serializer\Encoder\JsonEncode;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
@@ -240,7 +241,7 @@ class RedisCacheAdapter extends AbstractAdapter
         return count($this->redis->keys($this->namespace . '*')) === 0;
     }
 
-    public function getClient(): \Redis|\Predis\ClientInterface
+    public function getClient(): \Redis|ClientInterface
     {
         return $this->redis;
     }
@@ -353,16 +354,16 @@ class RedisCacheAdapter extends AbstractAdapter
         }
 
         if ($memberKey) {
-            if ($this->redis->hSet($validKey, $validMemberKey, $value)) {
-                if ($lifetime === null) {
-                    return;
-                }
-                if ($this->redis->expire($validKey, $lifetime)) {
-                    return;
-                }
-                $this->redis->hDel($validKey, $validMemberKey);
+            if ($this->redis->hSet($validKey, $validMemberKey, $value) === false) {
+                throw CacheException::createFailedSet($key, $memberKey);
             }
-            throw CacheException::createFailedSet($key, $memberKey);
+            if ($lifetime === null) {
+                return;
+            }
+            if ($this->redis->expire($validKey, $lifetime)) {
+                return;
+            }
+            $this->redis->hDel($validKey, $validMemberKey);
         }
 
         if ($lifetime === null) {

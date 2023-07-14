@@ -65,7 +65,7 @@ abstract class AbstractAdapter implements CacheInterface
             );
         }
         if ($withNamespace) {
-            $key = $this->namespace . $key;
+            $key = $this->namespace . static::NS_SEPARATOR . $key;
         }
         if ($this->maxIdLength !== null && \strlen($key) > $this->maxIdLength) {
             throw new InvalidArgumentException(
@@ -117,7 +117,7 @@ abstract class AbstractAdapter implements CacheInterface
                 )
             );
         }
-        $this->namespace = $namespace === '' ? '' : $this->validateKey($namespace, false) . static::NS_SEPARATOR;
+        $this->namespace = $namespace === '' ? '' : $this->validateKey($namespace, false);
     }
 
     /**
