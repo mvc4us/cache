@@ -27,13 +27,30 @@ class RedisCacheAdapter extends AbstractAdapter
      * @throws \Mvc4us\Cache\Exception\CacheException
      */
     public function __construct(
-        string $dsn,
-        array $options = [],
+        private string $dsn,
+        private array $options = [],
         string $namespace = '',
         \DateInterval|int|null $defaultLifetime = null
     ) {
         parent::__construct($namespace, $defaultLifetime);
-        $this->initialize($dsn, $options);
+        $this->initialize($this->dsn, $this->options);
+    }
+
+    /**
+     * @inheritDoc
+     * @throws \RedisException
+     */
+    public function isConnected(): bool
+    {
+        return $this->redis->isConnected();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function reConnect(): void
+    {
+        $this->initialize($this->dsn, $this->options);
     }
 
     /**
@@ -249,6 +266,7 @@ class RedisCacheAdapter extends AbstractAdapter
     /**
      * @throws \Mvc4us\Cache\Exception\NotFoundException
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
+     * @throws \RedisException
      */
     private function doGet(string $key, ?string $memberKey, string $type, mixed $default): mixed
     {
@@ -390,11 +408,6 @@ class RedisCacheAdapter extends AbstractAdapter
             'json',
             [
                 JsonEncode::OPTIONS => JSON_HEX_TAG + JSON_HEX_AMP + JSON_HEX_APOS + JSON_HEX_QUOT,
-                //AbstractNormalizer::IGNORED_ATTRIBUTES => [
-                //    '__initializer__',
-                //    '__cloner__',
-                //    '__isInitialized__',
-                //],
                 'circular_reference_limit' => 1,
                 AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object, $format, $context) {
                     return null;

@@ -9,6 +9,22 @@ namespace Mvc4us\Cache;
 interface CacheInterface
 {
     /**
+     * Check if backend is connected
+     *
+     * @return bool
+     */
+    public function isConnected(): bool;
+
+    /**
+     * Reconnects to the cache server with current options.
+     *
+     * @return void
+     * @throws \Mvc4us\Cache\Exception\InvalidArgumentException
+     * @throws \Mvc4us\Cache\Exception\CacheException
+     */
+    public function reConnect(): void;
+
+    /**
      * Fetches an item from the cache.
      *
      * @param string $key                                       The key of the item to retrieve from the cache
@@ -228,7 +244,7 @@ interface CacheInterface
     public function getItemAll(string $key, ?array $default = null): array;
 
     /**
-     * If the adapter supports persists data into a table in the cache, uniquely referenced by a key and a member key
+     * If the adapter supports persisting data into a table in the cache, uniquely referenced by a key and a member key
      * with an optional expiration TTL time.
      *
      * @param string $key                       The key of a table in the cache.
