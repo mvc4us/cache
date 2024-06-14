@@ -19,7 +19,6 @@ use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 class RedisCacheAdapter extends AbstractAdapter
 {
     public const RESERVED_CHARACTERS = '{}()\@:';
-
     use RedisTrait;
 
     /**
@@ -189,6 +188,9 @@ class RedisCacheAdapter extends AbstractAdapter
         return $this->doGet($key, $memberKey, 'object', $default);
     }
 
+    /**
+     * @inheritDoc
+     */
     public function getItemAll(string $key, ?array $default = null): array
     {
         if (!$this->has($key)) {
@@ -198,6 +200,17 @@ class RedisCacheAdapter extends AbstractAdapter
             return $default;
         }
         return $this->redis->hGetAll($this->validateKey($key));
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getItemKeys(string $key): array
+    {
+        if (!$this->has($key)) {
+            return [];
+        }
+        return $this->redis->hKeys($this->validateKey($key));
     }
 
     /**
@@ -281,12 +294,12 @@ class RedisCacheAdapter extends AbstractAdapter
             throw InvalidArgumentException::createInvalidDefaultType(gettype($default), $type);
         }
 
-        if (!$this->has($key) || ($memberKey && !$this->hasItem($key, $memberKey))) {
-            if ($default === null) {
-                throw NotFoundException::create($key, $memberKey);
-            }
-            return $default;
-        }
+        //if (!$this->has($key) || ($memberKey && !$this->hasItem($key, $memberKey))) {
+        //    if ($default === null) {
+        //        throw NotFoundException::create($key, $memberKey);
+        //    }
+        //    return $default;
+        //}
 
         if ($type === 'array') {
             if ($memberKey) {
@@ -331,10 +344,17 @@ class RedisCacheAdapter extends AbstractAdapter
                 return $value;
             }
 
-            if (is_object($default)) {
+            if (is_object($default) || $default === null) {
                 return $default;
             }
             throw InvalidArgumentException::createInvalidType(gettype($value), $type);
+        }
+
+        if (!$this->has($key) || ($memberKey && !$this->hasItem($key, $memberKey))) {
+            if ($default === null) {
+                throw NotFoundException::create($key, $memberKey);
+            }
+            return $default;
         }
 
         if ($memberKey) {

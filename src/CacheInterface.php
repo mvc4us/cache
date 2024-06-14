@@ -244,6 +244,17 @@ interface CacheInterface
     public function getItemAll(string $key, ?array $default = null): array;
 
     /**
+     * If the adapter supports returns array of member keys of a table uniquely referenced by a key.
+     *
+     * @param string $key                                       The key of the table in the cache
+     * @return array
+     * @throws \Mvc4us\Cache\Exception\InvalidArgumentException When the $key is not valid or when the type of item to
+     *                                                          be returned does not match with the type of $default if
+     *                                                          provided
+     */
+    public function getItemKeys(string $key): array;
+
+    /**
      * If the adapter supports persisting data into a table in the cache, uniquely referenced by a key and a member key
      * with an optional expiration TTL time.
      *
@@ -260,7 +271,7 @@ interface CacheInterface
     public function setItem(string $key, string $memberKey, mixed $value, \DateInterval|int|null $lifetime): void;
 
     /**
-     * Deletes an item from a hash table from the cache by its unique key.
+     * Deletes an item of a table from the cache by its unique key and member key.
      *
      * @param string $key       The unique key of this table in the cache.
      * @param string $memberKey The unique key of the item in this table.
