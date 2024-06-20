@@ -199,7 +199,7 @@ class RedisCacheAdapter extends AbstractAdapter
             }
             return $default;
         }
-        return $this->redis->hGetAll($this->validateKey($key));
+        return $this->redis->hGetAll($this->validateKey($key)) ?: [];
     }
 
     /**
