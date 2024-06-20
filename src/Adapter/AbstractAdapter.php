@@ -55,7 +55,7 @@ abstract class AbstractAdapter implements CacheInterface
         if ('' === $key) {
             throw new InvalidArgumentException('Cache key length must be greater than zero.');
         }
-        if (strpbrk($key, static::RESERVED_CHARACTERS) !== false) {
+        if (strlen(static::RESERVED_CHARACTERS) && strpbrk($key, static::RESERVED_CHARACTERS) !== false) {
             throw new InvalidArgumentException(
                 \sprintf(
                     'Cache key/namespace "%s" contains reserved characters "%s".',

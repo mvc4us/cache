@@ -18,7 +18,7 @@ use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
  */
 class RedisCacheAdapter extends AbstractAdapter
 {
-    public const RESERVED_CHARACTERS = '{}()\@:';
+    public const RESERVED_CHARACTERS = '';
     use RedisTrait;
 
     /**
