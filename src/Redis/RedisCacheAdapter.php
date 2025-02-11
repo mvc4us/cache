@@ -376,7 +376,7 @@ class RedisCacheAdapter extends AbstractAdapter
     private function doSet(string $key, ?string $memberKey, mixed $value, int|\DateInterval|null $lifetime): void
     {
         $validKey = $this->validateKey($key);
-        $validMemberKey = $memberKey ? $this->validateKey($memberKey, false) : null;
+        $validMemberKey = $memberKey !== null ? $this->validateKey($memberKey, false) : null;
 
         $lifetime = $this->validateLifeTime($lifetime);
 
@@ -391,7 +391,7 @@ class RedisCacheAdapter extends AbstractAdapter
             $value = $this->serialize($value);
         }
 
-        if ($memberKey) {
+        if ($memberKey !== null) {
             if ($this->redis->hSet($validKey, $validMemberKey, $value) === false) {
                 throw CacheException::createFailedSet($key, $memberKey);
             }
