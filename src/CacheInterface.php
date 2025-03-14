@@ -255,8 +255,8 @@ interface CacheInterface
     public function getItemKeys(string $key): array;
 
     /**
-     * If the adapter supports persisting data into a table in the cache, uniquely referenced by a key and a member key
-     * with an optional expiration TTL time.
+     * If the adapter supports stores data into a table, uniquely referenced by a key and a member key with an optional
+     * expiration TTL time.
      *
      * @param string $key                       The key of a table in the cache.
      * @param string $memberKey                 The unique key of an item in the table.
@@ -268,7 +268,12 @@ interface CacheInterface
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException When the $key/$memberKey is not valid
      * @throws \Mvc4us\Cache\Exception\CacheException           When the item can not be stored into cache/table
      */
-    public function setItem(string $key, string $memberKey, mixed $value, \DateInterval|int|null $lifetime): void;
+    public function setItem(
+        string $key,
+        string $memberKey,
+        mixed $value,
+        \DateInterval|int|null $lifetime = null
+    ): void;
 
     /**
      * Deletes an item of a table from the cache by its unique key and member key.
@@ -299,7 +304,7 @@ interface CacheInterface
     /**
      * Gets remaining lifetime of an item in seconds.
      *
-     * @param string $key The unique cache key of the item.
+     * @param string $key The unique key of the item.
      * @return int
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException MUST be thrown if the key is not a legal value.
      */
@@ -308,9 +313,8 @@ interface CacheInterface
     /**
      * Sets or resets lifetime of an item.
      *
-     * @param string $key                      The key of the item to store.
-     * @param int|\DateInterval|null $lifetime If no value is sent and the driver supports then the library may set a
-     *                                         default value for it or let the driver take care of that.
+     * @param string $key                      The unique key of the item to store.
+     * @param int|\DateInterval|null $lifetime Null for persistent storage if driver supports.
      * @return bool                            True on success and false on failure.
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException MUST be thrown if the key is not a legal value.
      */
@@ -355,11 +359,11 @@ interface CacheInterface
     public function getDefaultLifetime(): ?int;
 
     /**
-     * Sets default lifetime for items.
+     * Sets the default lifetime for items.
      *
-     * @param \DateInterval|int|null $defaultLifetime
+     * @param \DateInterval|int|null $defaultLifetime Null for persistent storage if driver supports.
      * @return void
      */
-    public function setDefaultLifetime(\DateInterval|int|null $defaultLifetime): void;
+    public function setDefaultLifetime(\DateInterval|int|null $defaultLifetime = null): void;
 }
 

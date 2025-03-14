@@ -131,7 +131,7 @@ abstract class AbstractAdapter implements CacheInterface
     /**
      * @inheritDoc
      */
-    public function setDefaultLifetime(\DateInterval|int|null $defaultLifetime): void
+    public function setDefaultLifetime(\DateInterval|int|null $defaultLifetime = null): void
     {
         $this->defaultLifetime = $this->validateLifeTime($defaultLifetime);
     }

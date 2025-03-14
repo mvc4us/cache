@@ -250,6 +250,9 @@ class RedisCacheAdapter extends AbstractAdapter
      */
     public function setLifeTime(string $key, int|\DateInterval|null $lifetime = null): bool
     {
+        if ($lifetime === null || $this->validateLifeTime($lifetime) === null) {
+            return $this->redis->persist($this->validateKey($key));
+        }
         return $this->redis->expire($this->validateKey($key), $this->validateLifeTime($lifetime));
     }
 
@@ -376,7 +379,7 @@ class RedisCacheAdapter extends AbstractAdapter
     private function doSet(string $key, ?string $memberKey, mixed $value, int|\DateInterval|null $lifetime): void
     {
         $validKey = $this->validateKey($key);
-        $validMemberKey = $memberKey !== null ? $this->validateKey($memberKey, false) : null;
+        $validMemberKey = $memberKey === null ? null : $this->validateKey($memberKey, false);
 
         $lifetime = $this->validateLifeTime($lifetime);
 
