@@ -280,11 +280,10 @@ interface CacheInterface
      *
      * @param string $key       The unique key of this table in the cache.
      * @param string $memberKey The unique key of the item in this table.
-     * @return bool True if the item was successfully removed. False if there was an error.
      * @throws \Mvc4us\Cache\Exception\InvalidArgumentException When the $key/$memberKey is not valid
      * @throws \Mvc4us\Cache\Exception\CacheException           When the item can not be deleted from cache
      */
-    public function deleteItem(string $key, string $memberKey): bool;
+    public function deleteItem(string $key, string $memberKey): void;
 
     /**
      * Determines whether an item in a hash table is present in the cache.

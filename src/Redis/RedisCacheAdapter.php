@@ -224,9 +224,9 @@ class RedisCacheAdapter extends AbstractAdapter
     /**
      * @inheritDoc
      */
-    public function deleteItem($key, $memberKey): bool
+    public function deleteItem($key, $memberKey): void
     {
-        return $this->redis->hDel($this->validateKey($key), $this->validateKey($memberKey, false));
+        $this->redis->hDel($this->validateKey($key), $this->validateKey($memberKey, false));
     }
 
     /**
